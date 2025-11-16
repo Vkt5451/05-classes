@@ -28,12 +28,36 @@ tokens :-
   ------------------------------------------------------------------------------
   -- Syntax  [ THIS IS THE ONLY SEGMENT YOU NEED TO CHANGE ]
 
+  let                           { \p _ -> LET    p }
   in                            { \p _ -> IN     p }
-  "&&"                          { \p _ -> AND    p }
+  if                            { \p _ -> IF     p }
+  then                          { \p _ -> THEN   p }
+  else                          { \p _ -> ELSE   p }
+  "True"                        { \p _ -> TRUE   p }
+  "False"                       { \p _ -> FALSE  p }
+  
+  \\                            { \p _ -> LAM     p }
+  "->"                          { \p _ -> ARROW   p }
+  "&&"                          { \p _ -> AND     p }
+  "+"                           { \p _ -> PLUS     p }
+  "-"                           { \p _ -> MINUS    p }
+  "*"                           { \p _ -> MUL      p }
+  "<"                           { \p _ -> LESS     p }
+  "<="                          { \p _ -> LEQ      p }
+  "="                           { \p _ -> EQB      p }
+  "=="                           { \p _ -> EQL      p }
+  "/="                          { \p _ -> NEQ      p }
+  "||"                          { \p _ -> OR       p }
+
+  $alpha [$alpha $digit \_ \']* { \p s -> ID     p s }
+  $digit+                       { \p s -> NUM p (read s) }
+
   \(                            { \p _ -> LPAREN p }
   \)                            { \p _ -> RPAREN p }
   \:                            { \p _ -> COLON  p }
   \,                            { \p _ -> COMMA  p }
+  \[                            { \p _ -> LBRAC  p }
+  \]                            { \p _ -> RBRAC  p }
 
   -- DO NOT CHANGE ANYTHING AFTER THIS LINE ------------------------------------
   ------------------------------------------------------------------------------

@@ -193,18 +193,52 @@ eval env e = case evalE env e of
 --------------------------------------------------------------------------------
 evalE :: Env -> Expr -> Either Value Value
 --------------------------------------------------------------------------------
-evalE env (EInt i)       = error "TBD"
-evalE env (EBool b)      = error "TBD" 
-evalE env (EVar x)       = error "TBD"
-evalE env (EBin o e1 e2) = error "TBD" 
-evalE env (EIf c t e)    = error "TBD" 
-evalE env (ELet x e1 e2) = error "TBD" 
-evalE env (EApp e1 e2)   = error "TBD" 
-evalE env (ELam x e)     = error "TBD" 
-evalE env ENil           = error "TBD" 
+evalE env (EInt i)       = Right (VInt i)
+evalE env (EBool b)      = Right (VBool b)
+evalE env (EVar x)       = Right (lookupId x env)
 
-evalE env (EThr e)       = error "TBD" 
-evalE env (ETry e1 x e2) = error "TBD" 
+evalE env (EBin op e1 e2) = 
+  case evalE env e1 of
+    Left err -> Left err  
+    Right v1 -> case evalE env e2 of
+      Left err -> Left err 
+      Right v2 -> Right (evalOp op v1 v2)
+
+evalE env (EIf e1 e2 e3) = 
+  case evalE env e1 of
+    Right (VBool False) -> evalE env e3
+    Right (VInt 0)      -> evalE env e3
+    Right VNil          -> evalE env e3
+    Right _             -> evalE env e2
+    Left err            -> Left err
+
+evalE env (ELet x e1 e2) = 
+  let env' = (x, v) : env
+      v = case evalE env' e1 of
+            Right val -> val
+            Left _    -> VErr "error in recursive binding"
+  in case evalE env' e2 of
+       Right result -> Right result
+       Left err     -> Left err
+
+    
+evalE env (EApp e1 e2) = case (evalE env e1, evalE env e2) of
+    (Right (VClos closEnv x body), Right actual) -> evalE ((x, actual) : closEnv) body
+    (Right (VPrim f), Right actual) -> Right (f actual)
+    _ -> Left (VErr "type error")
+
+evalE env (ELam x e)     = Right (VClos env x e)
+evalE env ENil           = Right VNil 
+
+evalE env (EThr e) = case evalE env e of
+  Right v   -> Left v    
+  Left err  -> Left err 
+
+
+evalE env(ETry e1 x e2) = case evalE env e1 of
+  Right v -> Right v
+  Left err -> evalE ((x,err) : env) e2
+
 
 --------------------------------------------------------------------------------
 -- | Unit tests for `throw`
@@ -261,7 +295,18 @@ evalE env (ETry e1 x e2) = error "TBD"
 --------------------------------------------------------------------------------
 evalOp :: Binop -> Value -> Value -> Value
 --------------------------------------------------------------------------------
-evalOp = error "TBD:evalOp"
+evalOp Plus (VInt v1) (VInt v2) = VInt (v1 + v2)
+evalOp Plus  (VInt v1) (VInt v2) = VInt (v1 + v2)
+evalOp Minus (VInt v1) (VInt v2) = VInt (v1 - v2)
+evalOp Mul   (VInt v1) (VInt v2) = VInt (v1 * v2)
+evalOp Eq v1 v2                  = VBool (v1 == v2)
+evalOp Ne v1 v2                  = VBool (v1 /= v2)
+evalOp Lt (VInt v1) (VInt v2)    = VBool (v1 < v2)
+evalOp Le (VInt v1) (VInt v2)    = VBool (v1 <= v2)
+evalOp And (VBool v1) (VBool v2) = VBool (v1 && v2)
+evalOp Or (VBool v1) (VBool v2)  = VBool (v1 || v2)
+evalOp Cons v1 v2                = VPair v1 v2
+evalOp _ _ _                     = throw (Error "type error: binop")
 
 --------------------------------------------------------------------------------
 -- | `lookupId x env` returns the most recent
@@ -280,13 +325,26 @@ evalOp = error "TBD:evalOp"
 --------------------------------------------------------------------------------
 lookupId :: Id -> Env -> Value
 --------------------------------------------------------------------------------
-lookupId = error "TBD:lookupId"
+lookupId x env = case lookup x env of 
+                  Just v -> v
+                  Nothing -> throw (Error ("unbound variable: " ++ x))
+
 
 prelude :: Env
 prelude =
-  [ -- HINT: you may extend this "built-in" environment
+  [ ("head", VPrim headF)
+  , ("tail", VPrim tailF)
     -- with some "operators" that you find useful...
   ]
+
+headF :: Value -> Value
+headF (VPair x _) = x
+headF _ = throw (Error "head error")
+
+tailF :: Value -> Value
+tailF (VPair _ xs) = xs
+tailF _ = throw (Error "tail error")
+
 
 env0 :: Env
 env0 =  [ ("z1", VInt 0)
