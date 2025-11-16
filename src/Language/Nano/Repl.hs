@@ -62,8 +62,14 @@ exitEnv err = putStrLn (errMsg err) >> return prelude
 --------------------------------------------------------------------------------
 defsEnv :: [(Id, Expr)] -> IO Env
 --------------------------------------------------------------------------------
-defsEnv xes = error "TBD:defsEnv" 
-
+defsEnv [] = return []
+defsEnv xes = defsEnv' prelude xes
+  where
+    defsEnv' env [] = return env
+    defsEnv' env ((x, expr) : rest) = do
+      let value = eval env expr
+      defsEnv' ((x, value) : env) rest
+      
 --------------------------------------------------------------------------------
 -- | A Datatype Commands for the shell -----------------------------------------
 --------------------------------------------------------------------------------
@@ -77,7 +83,11 @@ data Cmd
   deriving (Show)
 
 strCmd :: String -> Cmd
-strCmd str = error "TBD:strCmd" 
+strCmd str 
+  | L.isPrefixOf ":quit" str = CQuit
+  | L.isPrefixOf ":run" str  = CRun (chomp 4 str) 
+  | L.isPrefixOf ":load" str = CLoad (chomp 5 str)
+  | otherwise = CUnknown  -- or CEval str
 
 -- HINT: You may want to use the below functions and `L.isPrefixOf`, `chomp`, `pfxRun`, 
 

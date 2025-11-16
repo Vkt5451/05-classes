@@ -1,3 +1,5 @@
-nano: TBD: main
-CallStack (from HasCallStack):
-  error, called at src/Main.hs:10:3 in main:Main
+------------------------------------------------------------
+-------- The NANO Interpreter v.0.0.0.0 --------------------
+------------------------------------------------------------
+λ [0] λ [1] unbound variable: sub
+λ [2] Goodbye.
